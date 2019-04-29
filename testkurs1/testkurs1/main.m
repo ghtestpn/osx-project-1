@@ -7,6 +7,7 @@
 
 @interface Cell: NSObject
 @property NSMutableArray *DNA;
+@property (readonly) NSArray *nucleotides;
 -(id)init;
 -(int)hammingDistance:(Cell*)cell;
 @end
@@ -15,39 +16,34 @@
 -(void)mutate:(int)proc;
 @end
 
-@implementation Cell{
-    unsigned char i,j,k;
-}
-
+@implementation Cell
+@synthesize DNA;
 -(id)init{
-    _DNA = [[NSMutableArray alloc] initWithCapacity:100];
-    NSString *A=@"A", *T=@"T", *G=@"G", *C=@"C";
-    self=[super init];
-    if(self){
-        i=0;
-        while(i<100){
-            if(SecRandomCopyBytes(kSecRandomDefault,1,&k)==errSecSuccess) _DNA[i]=k==1?A:k==2?T:k==3?G:k==4?C:@"0";
-            if(![_DNA[i] isEqual:@"0"])
-                i++;
-        }
-    }
+    self=[super init]; if(self){
+        _nucleotides=[[NSArray alloc] initWithObjects:@"A", @"T", @"G", @"C", nil];
+        DNA = [[NSMutableArray alloc] initWithCapacity:100];
+        while([DNA count]<100) [DNA addObject:[_nucleotides objectAtIndex:arc4random() %4]];
+/*        NSString *A=@"A", *T=@"T", *G=@"G", *C=@"C";
+            while(i<100){
+                if(SecRandomCopyBytes(kSecRandomDefault,1,&k)==errSecSuccess) DNA[i]=k==1?A:k==2?T:k==3?G:k==4?C:@"0";
+                if(![[DNA objectAtIndex:i] isEqual:@"0"]) i++;
+            }
+*/    }
     return self;
 }
 -(int)hammingDistance:(Cell*)cell{
     int unequal=0;
     [self printDNA];
     [cell printDNA];
-    for(i=0;i<100;i++){
-        if(cell.DNA[i]!=_DNA[i]) unequal++;
-    }
+    NSEnumerator *selfenum=[DNA objectEnumerator];
+    NSEnumerator *cellenum=[[cell DNA] objectEnumerator];
+    id DNAObject;
+    while(DNAObject = [selfenum nextObject]) if(DNAObject!=[cellenum nextObject]) unequal++;
     return unequal;
 }
 -(void)printDNA{
-    NSString *DNAstring=[[NSString alloc] init];
-    for(i=0;i<100;i++){
-        DNAstring=[DNAstring stringByAppendingString:_DNA[i]];
-    }
-    NSLog(DNAstring);
+    NSLog(@"%@", [DNA componentsJoinedByString:[[NSString alloc] init]]);
+//    NSLog(@"%@",DNA);
 }
 
 
@@ -55,18 +51,13 @@
 
 @implementation Cell(mutator)
 -(void)mutate:(int)proc{
-    i=0;
-    NSString *A=@"A", *T=@"T", *G=@"G", *C=@"C";
-    while(i<proc){
-        SecRandomCopyBytes(kSecRandomDefault, 1, &k);
-        if(k>99||[_DNA[k] isEqual:@"0"]) continue;
-        else {_DNA[k]=@"0";i++;}
-    }
-    i=0;
-    while(i<100){
-        if(![_DNA[i]isEqual:@"0"]){i++; continue;};
-        SecRandomCopyBytes(kSecRandomDefault, 1, &k);
-        _DNA[i]=k==1?A:k==2?T:k==3?G:k==4?C:@"0";
+    NSArray *listReplaced = [[NSArray alloc] init];
+    while([listReplaced count]<proc){
+        NSNumber *k=[[NSNumber alloc] initWithUnsignedChar:(arc4random() % 99)];
+        if(![listReplaced containsObject:k]){
+            [DNA replaceObjectAtIndex:[k intValue] withObject:[_nucleotides objectAtIndex:arc4random() %4]];
+            listReplaced=[listReplaced arrayByAddingObject:k];
+        }
     }
 }
 @end
@@ -79,8 +70,8 @@ int main(int argc, const char * argv[]) {
         Cell *c2 =[[Cell alloc] init];
         unequal=[c1 hammingDistance:c2];
         NSLog(@"different: %d",unequal);
-        [c1 mutate:1];
-        [c2 mutate:1];
+        [c1 mutate:30];
+        [c2 mutate:30];
         unequal=[c1 hammingDistance:c2];
         NSLog(@"different: %d",unequal);
     }
